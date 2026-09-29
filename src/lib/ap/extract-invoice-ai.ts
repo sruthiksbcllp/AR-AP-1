@@ -97,7 +97,10 @@ function looksLikeOpenAiKey(value: string) {
 
 function resolveInvoiceModel(): LanguageModel {
   const namedAnthropic =
-    process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || ""
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.CLAUDE_API_KEY ||
+    process.env.claude ||
+    ""
   const namedOpenAi = process.env.OPENAI_API_KEY || ""
 
   if (namedAnthropic && looksLikeAnthropicKey(namedAnthropic)) {
