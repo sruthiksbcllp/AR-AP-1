@@ -24,7 +24,7 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -66,7 +66,7 @@ export function AppSidebar() {
                     >
                       <Link href={item.href}>
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span className="min-w-0 truncate">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
