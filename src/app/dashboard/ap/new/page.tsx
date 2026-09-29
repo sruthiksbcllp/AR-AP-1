@@ -23,7 +23,7 @@ export default async function NewBillPage({
   return (
     <PageShell
       title="Create bill"
-      description="Upload a vendor bill. OCR fills vendor, due date, items, and total. Review before submitting."
+      description="Upload a vendor bill. The form fills vendor, due date, items, and total. Review before submitting."
     >
       <BillCreateForm
         vendors={vendors}

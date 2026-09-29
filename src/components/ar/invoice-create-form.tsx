@@ -105,6 +105,7 @@ export function InvoiceCreateForm({
   const [extractNote, setExtractNote] = React.useState<string | null>(null)
   const [extractFailed, setExtractFailed] = React.useState(false)
   const [needsReview, setNeedsReview] = React.useState(false)
+  const [blockSubmit, setBlockSubmit] = React.useState(false)
   const [fxSummary, setFxSummary] = React.useState<{
     invoiceDate: string
     sourceCurrency: string
@@ -156,6 +157,7 @@ export function InvoiceCreateForm({
     setExtractNote(null)
     setExtractFailed(false)
     setNeedsReview(false)
+    setBlockSubmit(false)
     setFxSummary(null)
     if (!file) return
 
@@ -173,6 +175,7 @@ export function InvoiceCreateForm({
       }
 
       setNeedsReview(result.needsReview)
+      setBlockSubmit(result.blockSubmit)
       if (
         result.issueDate &&
         result.fxRate &&
@@ -368,13 +371,13 @@ export function InvoiceCreateForm({
             />
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Upload className="size-3.5" />
-              OCR reads the customer, dates, items, and total · max 10MB
+              Reads the customer, dates, items, and total · max 10MB
             </div>
           </div>
           {extracting ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" />
-              Running OCR on customer, invoice number, dates, items, and total…
+              Reading customer, invoice number, dates, items, and total…
             </p>
           ) : extractNote ? (
             <p
@@ -388,7 +391,7 @@ export function InvoiceCreateForm({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Upload a PDF or photo. OCR fills the customer, invoice number,
+              Upload a PDF or photo. The form fills the customer, invoice number,
               issue date, due date, and line items. Review them before creating
               the invoice.
             </p>
@@ -539,10 +542,10 @@ export function InvoiceCreateForm({
         </div>
       </div>
 
-      {needsReview ? (
+      {needsReview && !blockSubmit ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
           Review required: the invoice date or exchange rate could not be
-          confirmed, so amounts were not converted. Check the OCR values before
+          confirmed, so amounts were not converted. Check the filled values before
           creating the invoice.
         </p>
       ) : null}
@@ -559,7 +562,13 @@ export function InvoiceCreateForm({
         </Button>
         <Button
           type="submit"
-          disabled={busy || needsReview || customerOptions.length === 0 || !customerId}
+          disabled={
+            busy ||
+            blockSubmit ||
+            needsReview ||
+            customerOptions.length === 0 ||
+            !customerId
+          }
         >
           {pending ? (
             <>

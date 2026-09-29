@@ -93,6 +93,10 @@ function toIsoDate(year: number, month: number, day: number) {
   return date.toISOString().slice(0, 10)
 }
 
+export function parseInvoiceDate(raw: string) {
+  return parseLooseDate(raw)
+}
+
 function parseLooseDate(raw: string) {
   const value = raw.trim()
   const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)

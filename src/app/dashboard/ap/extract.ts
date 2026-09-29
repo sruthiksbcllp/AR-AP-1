@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 
-import { parseInvoiceText, normalizeName } from "@/lib/ap/parse-invoice-text"
-import { readBillText } from "@/lib/ap/read-bill-text"
+import {
+  extractInvoiceWithAi,
+  invoiceExtractUserError,
+} from "@/lib/ap/extract-invoice-ai"
+import { normalizeName } from "@/lib/ap/parse-invoice-text"
 import { requireOrgContext } from "@/lib/auth/org"
 import { DEFAULT_CURRENCY, formatINR, formatMoney } from "@/lib/currency"
 import { getHistoricalRateToInr } from "@/lib/fx"
@@ -92,7 +95,7 @@ export async function extractBillFromUpload(
     return {
       success: false,
       error:
-        "OCR works with PDF, JPG, PNG, or WebP. Word files can still be attached, but details must be entered by hand.",
+        "Upload a PDF, JPG, PNG, or WebP. Word files can still be attached, but details must be entered by hand.",
     }
   }
 
@@ -109,30 +112,21 @@ export async function extractBillFromUpload(
   const knownVendors = vendors ?? []
   const bytes = new Uint8Array(await file.arrayBuffer())
 
-  let text = ""
+  let extracted
   try {
-    text = await readBillText(bytes, mediaType)
+    extracted = await extractInvoiceWithAi({
+      bytes,
+      mediaType,
+      fileName: file.name,
+      knownVendors: knownVendors.map((vendor) => vendor.name),
+    })
   } catch (error) {
-    console.error("bill OCR failed", error)
+    console.error("bill AI extract failed", error)
     return {
       success: false,
-      error:
-        "OCR could not read this bill. Use a clear PDF or photo, then fill any missing fields.",
+      error: invoiceExtractUserError(error),
     }
   }
-
-  if (text.replace(/\s+/g, " ").trim().length < 12) {
-    return {
-      success: false,
-      error:
-        "OCR found no readable text. Try a clearer PDF or photo, then fill any missing fields.",
-    }
-  }
-
-  const extracted = parseInvoiceText(text, {
-    fileName: file.name,
-    knownVendors,
-  })
 
   const vendorName = extracted.vendorName.trim()
   const vendorEmail = extracted.vendorEmail.trim()
@@ -161,7 +155,7 @@ export async function extractBillFromUpload(
   if (sourceCurrency !== DEFAULT_CURRENCY) {
     if (!extracted.invoiceDateVerified || !extracted.invoiceDate) {
       needsReview = true
-      fxNote = `Needs review: OCR could not verify the invoice date, so ${sourceCurrency} was not converted to INR.`
+      fxNote = `Needs review: the invoice date could not be verified, so ${sourceCurrency} was not converted to INR.`
     } else {
       const quote = await getHistoricalRateToInr(
         sourceCurrency,
@@ -249,7 +243,7 @@ export async function extractBillFromUpload(
           entity_id: created.id,
           changes_json: {
             after: {
-              source: "bill-ocr",
+              source: "bill-ai",
               name: vendorName,
               email,
             },
@@ -286,16 +280,16 @@ export async function extractBillFromUpload(
     blockSubmit: extracted.requiresReview || needsReview,
     message: [
       extracted.requiresReview
-        ? `${extracted.reviewReason || "Invoice totals do not reconcile."} Line items were not applied. Correct the bill before submitting.`
+        ? `${extracted.reviewReason || "Invoice totals do not reconcile."} Line items were filled — correct them before submitting.`
         : null,
       needsReview
-        ? `${fxNote ?? "Needs review."} Vendor, bill number, due date, and line items were filled from OCR. Convert to INR after review — do not submit unconverted amounts.`
+        ? `${fxNote ?? "Needs review."} Vendor, bill number, due date, and line items were filled from the invoice. Convert to INR after review — do not submit unconverted amounts.`
         : null,
       !extracted.requiresReview && !needsReview && filled.length
-        ? `${fxNote ? `${fxNote} ` : ""}Filled ${filled.join(", ")} from OCR. Review before submitting.`
+        ? `${fxNote ? `${fxNote} ` : ""}Filled ${filled.join(", ")} from the invoice. Review before submitting.`
         : null,
       !extracted.requiresReview && !needsReview && !filled.length
-        ? "The file is attached, but OCR could not find bill details. Enter them manually."
+        ? "The file is attached, but invoice details could not be found. Enter them manually."
         : null,
     ]
       .filter(Boolean)

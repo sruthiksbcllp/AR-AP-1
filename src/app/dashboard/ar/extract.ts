@@ -2,8 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 
-import { parseInvoiceText, normalizeName } from "@/lib/ap/parse-invoice-text"
-import { readBillText } from "@/lib/ap/read-bill-text"
+import {
+  extractInvoiceWithAi,
+  invoiceExtractUserError,
+} from "@/lib/ap/extract-invoice-ai"
+import { normalizeName } from "@/lib/ap/parse-invoice-text"
 import { requireOrgContext } from "@/lib/auth/org"
 import { DEFAULT_CURRENCY, formatINR, formatMoney } from "@/lib/currency"
 import { getHistoricalRateToInr } from "@/lib/fx"
@@ -44,6 +47,7 @@ export type ExtractInvoiceResult =
       fxAsOf: string | null
       inrTotal: number | null
       needsReview: boolean
+      blockSubmit: boolean
       items: ExtractedInvoiceItem[]
       message: string
     }
@@ -98,7 +102,7 @@ export async function extractInvoiceFromUpload(
     return {
       success: false,
       error:
-        "OCR works with PDF, JPG, PNG, or WebP. Word files must be entered by hand.",
+        "Upload a PDF, JPG, PNG, or WebP. Word files must be entered by hand.",
     }
   }
 
@@ -115,30 +119,21 @@ export async function extractInvoiceFromUpload(
   const knownCustomers = customers ?? []
   const bytes = new Uint8Array(await file.arrayBuffer())
 
-  let text = ""
+  let extracted
   try {
-    text = await readBillText(bytes, mediaType)
+    extracted = await extractInvoiceWithAi({
+      bytes,
+      mediaType,
+      fileName: file.name,
+      knownCustomers: knownCustomers.map((customer) => customer.name),
+    })
   } catch (error) {
-    console.error("invoice OCR failed", error)
+    console.error("invoice AI extract failed", error)
     return {
       success: false,
-      error:
-        "OCR could not read this invoice. Use a clear PDF or photo, then fill any missing fields.",
+      error: invoiceExtractUserError(error),
     }
   }
-
-  if (text.replace(/\s+/g, " ").trim().length < 12) {
-    return {
-      success: false,
-      error:
-        "OCR found no readable text. Try a clearer PDF or photo, then fill any missing fields.",
-    }
-  }
-
-  const extracted = parseInvoiceText(text, {
-    fileName: file.name,
-    knownCustomers,
-  })
 
   const customerName = extracted.customerName.trim()
   const customerEmail = extracted.customerEmail.trim()
@@ -166,7 +161,7 @@ export async function extractInvoiceFromUpload(
   if (sourceCurrency !== DEFAULT_CURRENCY) {
     if (!extracted.invoiceDateVerified || !extracted.invoiceDate) {
       needsReview = true
-      fxNote = `Needs review: OCR could not verify the invoice date, so ${sourceCurrency} was not converted to INR.`
+      fxNote = `Needs review: the invoice date could not be verified, so ${sourceCurrency} was not converted to INR.`
     } else {
       const quote = await getHistoricalRateToInr(
         sourceCurrency,
@@ -254,7 +249,7 @@ export async function extractInvoiceFromUpload(
           entity_id: created.id,
           changes_json: {
             after: {
-              source: "invoice-ocr",
+              source: "invoice-ai",
               name: customerName,
               email,
             },
@@ -288,11 +283,23 @@ export async function extractInvoiceFromUpload(
     fxAsOf,
     inrTotal,
     needsReview,
+    blockSubmit: extracted.requiresReview || needsReview,
     items,
-    message: needsReview
-      ? `${fxNote ?? "Needs review."} Customer, invoice number, dates, and line items were filled from OCR. Convert to INR after review — do not submit unconverted amounts.`
-      : filled.length
-        ? `${fxNote ? `${fxNote} ` : ""}Filled ${filled.join(", ")} from OCR. Review before creating the invoice.`
-        : "OCR could not find invoice details. Enter them manually.",
+    message: [
+      extracted.requiresReview
+        ? `${extracted.reviewReason || "Invoice totals do not reconcile."} Correct the invoice before creating it.`
+        : null,
+      needsReview
+        ? `${fxNote ?? "Needs review."} Customer, invoice number, dates, and line items were filled from the invoice. Convert to INR after review — do not submit unconverted amounts.`
+        : null,
+      !extracted.requiresReview && !needsReview && filled.length
+        ? `${fxNote ? `${fxNote} ` : ""}Filled ${filled.join(", ")} from the invoice. Review before creating it.`
+        : null,
+      !extracted.requiresReview && !needsReview && !filled.length
+        ? "Invoice details could not be found. Enter them manually."
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" "),
   }
 }

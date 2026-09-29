@@ -418,13 +418,13 @@ export function BillCreateForm({
             />
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Upload className="size-3.5" />
-              OCR reads the invoice date and converts USD at that day's USD-to-INR rate · max 10MB
+              Reads the invoice date and converts USD at that day's USD-to-INR rate · max 10MB
             </div>
           </div>
           {extracting ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" />
-              Running OCR on vendor, invoice date, due date, items, and total…
+              Reading vendor, invoice date, due date, items, and total…
             </p>
           ) : extractNote ? (
             <p
@@ -438,7 +438,7 @@ export function BillCreateForm({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Upload a PDF or photo. OCR fills the form and converts foreign
+              Upload a PDF or photo. The form fills from the invoice and converts foreign
               amounts using the invoice-date rate — review it before submitting.
               Word files attach only.
             </p>
@@ -601,7 +601,7 @@ export function BillCreateForm({
       {needsReview && !blockSubmit ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
           Review required: the invoice date or historical USD-to-INR rate could
-          not be confirmed, so amounts were not converted. Check OCR values
+          not be confirmed, so amounts were not converted. Check the filled values
           before submitting.
         </p>
       ) : null}
