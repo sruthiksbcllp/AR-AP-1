@@ -1,13 +1,22 @@
 type PageShellProps = {
   title: string
+  greeting?: string
   description?: string
   children?: React.ReactNode
 }
 
-export function PageShell({ title, description, children }: PageShellProps) {
+export function PageShell({
+  title,
+  greeting,
+  description,
+  children,
+}: PageShellProps) {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="flex flex-col gap-1">
+        {greeting ? (
+          <p className="text-lg font-medium tracking-tight">{greeting}</p>
+        ) : null}
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {description ? (
           <p className="text-sm text-muted-foreground">{description}</p>

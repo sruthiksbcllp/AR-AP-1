@@ -25,11 +25,54 @@ type SessionClientResult =
       supabase: Awaited<ReturnType<typeof createClient>>
       userId: string
       email: string
+      displayName: string
     }
   | { ok: false; error: string }
 
 function claimString(value: unknown) {
-  return typeof value === "string" ? value : ""
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function metadataRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "string") {
+    try {
+      return metadataRecord(JSON.parse(value) as unknown)
+    } catch {
+      return null
+    }
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+  return value as Record<string, unknown>
+}
+
+function displayNameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? ""
+  const formatted = local
+    .split(/[._+\-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ")
+  return formatted || "there"
+}
+
+export function displayNameFromProfile(input: {
+  email: string
+  metadata?: unknown
+}) {
+  const metadata = metadataRecord(input.metadata)
+  const fromMetadata =
+    claimString(metadata?.full_name) ||
+    claimString(metadata?.name) ||
+    claimString(metadata?.display_name)
+  if (fromMetadata) return fromMetadata
+  return displayNameFromEmail(input.email)
+}
+
+export async function getLoggedInDisplayName() {
+  const session = await getSessionClient()
+  return session.ok ? session.displayName : "there"
 }
 
 export async function ensureOrgProfile(
@@ -89,11 +132,18 @@ export async function getSessionClient(): Promise<SessionClientResult> {
     return { ok: false, error: SIGN_IN_REQUIRED }
   }
 
+  const email = claimString(claimsData?.claims?.email)
+  const claims = metadataRecord(claimsData?.claims)
+
   return {
     ok: true,
     supabase,
     userId,
-    email: claimString(claimsData?.claims?.email),
+    email,
+    displayName: displayNameFromProfile({
+      email,
+      metadata: claims?.user_metadata,
+    }),
   }
 }
 
