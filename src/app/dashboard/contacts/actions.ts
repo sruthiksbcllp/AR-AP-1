@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache"
 
 import { requireOrgContext } from "@/lib/auth/org"
+import {
+  canCreateCustomer,
+  canCreateVendor,
+  deniedMessage,
+} from "@/lib/auth/roles"
 import type { ContactType, CreateContactInput } from "@/types/contacts"
 
 export type CreateContactResult =
@@ -69,7 +74,14 @@ export async function createContact(
     return { success: false, error: auth.error }
   }
 
-  const { supabase, userId, orgId } = auth.ctx
+  const { supabase, userId, orgId, role } = auth.ctx
+
+  if (parsed.type === "vendor" && !canCreateVendor(role)) {
+    return { success: false, error: deniedMessage("add vendors") }
+  }
+  if (parsed.type === "customer" && !canCreateCustomer(role)) {
+    return { success: false, error: deniedMessage("add customers") }
+  }
 
   const payload = {
     org_id: orgId,

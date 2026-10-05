@@ -1,5 +1,10 @@
 import { getSessionClient } from "@/lib/auth/org"
-import type { UserRole } from "@/lib/auth/org"
+import type { UserRole } from "@/lib/auth/roles"
+import {
+  canApproveBillAmount,
+  canReviewApprovals,
+  isUserRole,
+} from "@/lib/auth/roles"
 import type { BillListItem } from "@/types/bills"
 import type { Contact } from "@/types/contacts"
 
@@ -161,10 +166,12 @@ export async function getPendingApprovalBills(): Promise<PendingApprovalsQueryRe
       .eq("id", userId)
       .maybeSingle()
 
-    const role = (profile?.role as UserRole | undefined) ?? null
-    const canApprove = role === "admin" || role === "manager"
+    const role = isUserRole(String(profile?.role ?? ""))
+      ? (profile?.role as UserRole)
+      : null
+    const canApprove = role ? canReviewApprovals(role) : false
 
-    if (!canApprove) {
+    if (!role || !canApprove) {
       return {
         bills: [],
         role,
@@ -183,10 +190,12 @@ export async function getPendingApprovalBills(): Promise<PendingApprovalsQueryRe
       return { bills: [], role, canApprove, error: error.message }
     }
 
+    const bills = (data ?? [])
+      .map((row) => mapBillRow(row as Record<string, unknown>))
+      .filter((bill) => canApproveBillAmount(role, bill.total_amount))
+
     return {
-      bills: (data ?? []).map((row) =>
-        mapBillRow(row as Record<string, unknown>)
-      ),
+      bills,
       role,
       canApprove,
       error: null,

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { postJournal, revalidateAccounting } from "@/lib/accounting/post"
 import { requireOrgContext } from "@/lib/auth/org"
+import { canPostJournals, deniedMessage } from "@/lib/auth/roles"
 import { roundMoney } from "@/types/invoices"
 
 export type ActionResult =
@@ -17,6 +18,9 @@ export async function createManualJournal(input: {
 }): Promise<ActionResult> {
   const auth = await requireOrgContext()
   if (!auth.ok) return { success: false, error: auth.error }
+  if (!canPostJournals(auth.ctx.role)) {
+    return { success: false, error: deniedMessage("post journals") }
+  }
 
   const postingDate = String(input.postingDate ?? "").trim()
   const description = String(input.description ?? "").trim()

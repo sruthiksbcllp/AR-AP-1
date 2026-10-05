@@ -2,14 +2,20 @@ import { randomUUID } from "crypto"
 
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 import { createClient } from "@/lib/supabase/server"
+import {
+  isUserRole,
+  type UserRole,
+} from "@/lib/auth/roles"
 
-export type UserRole = "admin" | "manager" | "accountant" | "auditor"
+export type { UserRole }
 
 export type OrgContext = {
   supabase: Awaited<ReturnType<typeof createClient>>
   userId: string
   orgId: string
   role: UserRole
+  email: string
+  displayName: string
 }
 
 export type OrgContextResult =
@@ -78,7 +84,8 @@ export async function getLoggedInDisplayName() {
 export async function ensureOrgProfile(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-  email: string
+  email: string,
+  role: UserRole = "admin"
 ) {
   const { data: existing } = await supabase
     .from("users")
@@ -106,7 +113,7 @@ export async function ensureOrgProfile(
     id: userId,
     org_id: orgId,
     email,
-    role: "admin",
+    role,
   })
 
   if (profileError) {
@@ -151,7 +158,7 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
   const session = await getSessionClient()
   if (!session.ok) return session
 
-  const { supabase, userId, email } = session
+  const { supabase, userId, email, displayName } = session
 
   const loadProfile = () =>
     supabase.from("users").select("org_id, role").eq("id", userId).maybeSingle()
@@ -181,17 +188,25 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
     }
   }
 
+  const role = isUserRole(String(profile.role ?? ""))
+    ? (profile.role as UserRole)
+    : "requester"
+
   return {
     ok: true,
     ctx: {
       supabase,
       userId,
       orgId: profile.org_id as string,
-      role: profile.role as UserRole,
+      role,
+      email,
+      displayName,
     },
   }
 }
 
-export function canApproveBills(role: UserRole) {
-  return role === "admin" || role === "manager"
-}
+export {
+  canApproveBills,
+  canApproveBillAmount,
+  canReviewApprovals,
+} from "@/lib/auth/roles"

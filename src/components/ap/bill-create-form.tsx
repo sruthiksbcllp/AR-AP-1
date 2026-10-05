@@ -307,7 +307,8 @@ export function BillCreateForm({
 
       <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
         Bills totaling more than {formatINR(BILL_APPROVAL_THRESHOLD)} are sent
-        for manager/admin approval automatically.
+        for approval. Managers can approve up to ₹50,000; larger amounts need
+        Director / CFO.
       </div>
       {initialDescription ? (
         <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">

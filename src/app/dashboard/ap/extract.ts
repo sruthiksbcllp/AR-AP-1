@@ -8,6 +8,7 @@ import {
 } from "@/lib/ap/extract-invoice-ai"
 import { normalizeName } from "@/lib/ap/parse-invoice-text"
 import { requireOrgContext } from "@/lib/auth/org"
+import { canWriteAp, deniedMessage } from "@/lib/auth/roles"
 import { DEFAULT_CURRENCY, formatINR, formatMoney } from "@/lib/currency"
 import { getHistoricalRateToInr } from "@/lib/fx"
 import { calcLineTotal, roundMoney } from "@/types/bills"
@@ -78,6 +79,9 @@ export async function extractBillFromUpload(
 ): Promise<ExtractBillResult> {
   const auth = await requireOrgContext()
   if (!auth.ok) return { success: false, error: auth.error }
+  if (!canWriteAp(auth.ctx.role)) {
+    return { success: false, error: deniedMessage("extract vendor bills") }
+  }
 
   const { supabase, orgId, userId } = auth.ctx
   const file = formData.get("attachment")

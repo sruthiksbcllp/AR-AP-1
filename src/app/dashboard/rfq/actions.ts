@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { requireOrgContext } from "@/lib/auth/org"
+import { canCreateRfq, canEvaluateRfq, canQuoteRfq, deniedMessage } from "@/lib/auth/roles"
 import { roundMoney } from "@/types/bills"
 
 export type RfqActionResult =
@@ -23,7 +24,10 @@ export async function createRfq(formData: FormData): Promise<RfqActionResult> {
     return { success: false, error: "Keep the request under 160 characters." }
   }
 
-  const { supabase, orgId, userId } = auth.ctx
+  const { supabase, orgId, userId, role } = auth.ctx
+  if (!canCreateRfq(role)) {
+    return { success: false, error: deniedMessage("create a request for quotation") }
+  }
   const { data, error } = await supabase
     .from("rfqs")
     .insert({
@@ -65,7 +69,10 @@ export async function addRfqQuote(formData: FormData): Promise<RfqActionResult> 
     return { success: false, error: "Quoted amount must be greater than zero." }
   }
 
-  const { supabase, orgId, userId } = auth.ctx
+  const { supabase, orgId, userId, role } = auth.ctx
+  if (!canQuoteRfq(role)) {
+    return { success: false, error: deniedMessage("record vendor quotes") }
+  }
   const { data: rfq, error: rfqError } = await supabase
     .from("rfqs")
     .select("id, status")
@@ -115,7 +122,10 @@ export async function selectLowestQuote(formData: FormData): Promise<RfqActionRe
   const rfqId = String(formData.get("rfq_id") ?? "")
   if (!rfqId) return { success: false, error: "Request not found." }
 
-  const { supabase, orgId, userId } = auth.ctx
+  const { supabase, orgId, userId, role } = auth.ctx
+  if (!canEvaluateRfq(role)) {
+    return { success: false, error: deniedMessage("select a winning quote") }
+  }
   const { data: rfq, error: rfqError } = await supabase
     .from("rfqs")
     .select("id, status, title")

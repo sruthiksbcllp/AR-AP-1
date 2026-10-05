@@ -1,0 +1,10 @@
+alter type public.user_role add value if not exists 'requester';
+alter type public.user_role add value if not exists 'procurement';
+alter type public.user_role add value if not exists 'director_cfo';
+alter type public.user_role add value if not exists 'compliance';
+alter type public.user_role add value if not exists 'warehouse';
+alter type public.user_role add value if not exists 'finance';
+alter type public.user_role add value if not exists 'accounts_payable';
+alter type public.user_role add value if not exists 'accounts_receivable';
+alter type public.user_role add value if not exists 'management';
+alter type public.user_role add value if not exists 'vendor';

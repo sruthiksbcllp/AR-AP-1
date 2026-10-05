@@ -39,8 +39,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set("x-pathname", pathname)
+
   let supabaseResponse = NextResponse.next({
-    request,
+    request: { headers: requestHeaders },
   })
 
   const supabase = createServerClient(env.url, env.key, {
@@ -53,7 +56,7 @@ export async function updateSession(request: NextRequest) {
           request.cookies.set(name, value)
         )
         supabaseResponse = NextResponse.next({
-          request,
+          request: { headers: requestHeaders },
         })
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)

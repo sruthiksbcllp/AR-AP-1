@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 
 import { AppLogo } from "@/components/brand/app-logo"
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand"
+import { canAccessModule, type UserRole } from "@/lib/auth/roles"
 import { mainNavItems } from "@/lib/navigation"
 import {
   Sidebar,
@@ -20,8 +21,13 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-export function AppSidebar() {
+export function AppSidebar({
+  role,
+}: {
+  role: UserRole
+}) {
   const pathname = usePathname()
+  const items = mainNavItems.filter((item) => canAccessModule(role, item.module))
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
@@ -50,7 +56,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => {
+              {items.map((item) => {
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"
