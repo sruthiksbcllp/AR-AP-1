@@ -99,6 +99,9 @@ export function RfqWorkspace({
   const billHref = selected
     ? `/dashboard/ap/new?vendor=${encodeURIComponent(selected.vendorId)}&memo=${encodeURIComponent(rfq.title)}&amount=${encodeURIComponent(String(selected.amount))}`
     : null
+  const poHref = selected
+    ? `/dashboard/p2p/po/new?rfq=${encodeURIComponent(rfq.id)}&vendor=${encodeURIComponent(selected.vendorId)}`
+    : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -173,7 +176,7 @@ export function RfqWorkspace({
           ) : availableVendors.length === 0 ? (
             <p className="text-sm text-muted-foreground md:col-span-3">
               {vendors.length === 0
-                ? "Add a vendor in Contacts before recording a quote."
+                ? "Onboard and create a vendor before recording a quote."
                 : "Every vendor already has a quote on this request."}
             </p>
           ) : null}
@@ -240,11 +243,20 @@ export function RfqWorkspace({
             {pending === "select" ? <Loader2 className="animate-spin" /> : null}
             Select lowest quote
           </Button>
-        ) : billHref ? (
-          <Button asChild>
-            <Link href={billHref}>Create bill for selected vendor</Link>
-          </Button>
-        ) : null}
+        ) : (
+          <>
+            {poHref ? (
+              <Button asChild>
+                <Link href={poHref}>Create purchase order</Link>
+              </Button>
+            ) : null}
+            {billHref ? (
+              <Button variant="outline" asChild>
+                <Link href={billHref}>Create vendor invoice</Link>
+              </Button>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
   )

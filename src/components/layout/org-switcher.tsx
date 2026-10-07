@@ -1,10 +1,10 @@
 "use client"
 
-import * as React from "react"
-import { Check, ChevronsUpDown, Plus } from "lucide-react"
+import { Building2, Check, ChevronsUpDown } from "lucide-react"
+import { useRouter } from "next/navigation"
 
+import { selectCompany } from "@/app/select-company/actions"
 import { AppLogo } from "@/components/brand/app-logo"
-
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,52 +14,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { CompanyMembership } from "@/lib/auth/company"
+import { ROLE_LABELS, isUserRole } from "@/lib/auth/roles"
 
-const organizations = [
-  { id: "sbc", name: "SBC LLP", plan: "Enterprise" },
-  { id: "northwind", name: "Northwind Trading", plan: "Business" },
-  { id: "contoso", name: "Contoso Holdings", plan: "Enterprise" },
-]
-
-export function OrgSwitcher() {
-  const [activeOrg, setActiveOrg] = React.useState(organizations[0])
+export function OrgSwitcher({
+  companies,
+  activeId,
+  activeName,
+}: {
+  companies: CompanyMembership[]
+  activeId: string
+  activeName: string
+}) {
+  const router = useRouter()
+  const active = companies.find((company) => company.id === activeId)
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="h-9 max-w-[220px] justify-between gap-2 px-2.5 font-normal"
+          className="h-9 max-w-[240px] justify-between gap-2 px-2.5 font-normal"
         >
           <span className="flex min-w-0 items-center gap-2">
             <AppLogo size={24} className="size-6 shrink-0" />
-            <span className="truncate text-sm font-medium">{activeOrg.name}</span>
+            <span className="truncate text-sm font-medium">{activeName}</span>
           </span>
           <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+        <DropdownMenuLabel>Select your company</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {organizations.map((org) => (
+        {companies.map((company) => (
           <DropdownMenuItem
-            key={org.id}
-            onClick={() => setActiveOrg(org)}
+            key={company.id}
             className="justify-between"
+            onClick={() => {
+              const formData = new FormData()
+              formData.set("org_id", company.id)
+              void selectCompany(formData)
+            }}
           >
             <span className="flex flex-col gap-0.5">
-              <span className="font-medium">{org.name}</span>
-              <span className="text-xs text-muted-foreground">{org.plan}</span>
+              <span className="font-medium">{company.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {isUserRole(company.role) ? ROLE_LABELS[company.role] : company.role}
+              </span>
             </span>
-            {activeOrg.id === org.id ? (
-              <Check className="size-4 text-foreground" />
-            ) : null}
+            {active?.id === company.id ? <Check className="size-4" /> : null}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <Plus className="size-4" />
-          Create organization
+        <DropdownMenuItem onClick={() => router.push("/select-company")}>
+          <Building2 className="size-4" />
+          All companies
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

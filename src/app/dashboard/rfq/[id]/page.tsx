@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { P2pNav } from "@/components/p2p/p2p-nav"
 import { RfqWorkspace } from "@/components/rfq/rfq-workspace"
 import { PageShell } from "@/components/layout/page-shell"
 import { getVendorOptions } from "@/lib/ap/queries"
@@ -41,6 +42,7 @@ export default async function RfqDetailPage({
       title={rfq.title}
       description="Record each vendor response, then select the lowest quote."
     >
+      <P2pNav />
       <RfqWorkspace
         rfq={rfq}
         vendors={vendorsResult.vendors}

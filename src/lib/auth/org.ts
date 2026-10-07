@@ -1,21 +1,22 @@
-import { randomUUID } from "crypto"
-
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 import { createClient } from "@/lib/supabase/server"
-import {
-  isUserRole,
-  type UserRole,
-} from "@/lib/auth/roles"
+import { isUserRole, type UserRole } from "@/lib/auth/roles"
+import type { CompanyMembership } from "@/lib/auth/company"
 
 export type { UserRole }
+
+export const NO_COMPANY_SELECTED =
+  "Select your company to load that company's data."
 
 export type OrgContext = {
   supabase: Awaited<ReturnType<typeof createClient>>
   userId: string
   orgId: string
+  orgName: string
   role: UserRole
   email: string
   displayName: string
+  companies: CompanyMembership[]
 }
 
 export type OrgContextResult =
@@ -85,7 +86,7 @@ export async function ensureOrgProfile(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   email: string,
-  role: UserRole = "admin"
+  role: UserRole = "requester"
 ) {
   const { data: existing } = await supabase
     .from("users")
@@ -95,23 +96,9 @@ export async function ensureOrgProfile(
 
   if (existing) return
 
-  // Generate the org id in-app. Insert+select on organizations fails under RLS
-  // because SELECT is scoped to private.user_org_id(), which is null until the
-  // users row exists.
-  const orgId = randomUUID()
-  const { error: orgError } = await supabase.from("organizations").insert({
-    id: orgId,
-    name: "SBC LLP",
-    base_currency: "INR",
-  })
-
-  if (orgError) {
-    throw new Error(orgError.message)
-  }
-
   const { error: profileError } = await supabase.from("users").insert({
     id: userId,
-    org_id: orgId,
+    org_id: null,
     email,
     role,
   })
@@ -154,6 +141,36 @@ export async function getSessionClient(): Promise<SessionClientResult> {
   }
 }
 
+export async function getCompanyMemberships(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<CompanyMembership[]> {
+  const { data: memberships } = await supabase
+    .from("organization_memberships")
+    .select("org_id, role")
+    .eq("user_id", userId)
+
+  const rows = memberships ?? []
+  if (rows.length === 0) return []
+
+  const { data: orgs } = await supabase
+    .from("organizations")
+    .select("id, name")
+    .in(
+      "id",
+      rows.map((row) => row.org_id)
+    )
+
+  const names = new Map((orgs ?? []).map((org) => [org.id, org.name]))
+  return rows
+    .map((row) => ({
+      id: String(row.org_id),
+      name: names.get(row.org_id) ?? "Company",
+      role: String(row.role),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export async function requireOrgContext(): Promise<OrgContextResult> {
   const session = await getSessionClient()
   if (!session.ok) return session
@@ -165,7 +182,7 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
 
   let { data: profile, error: profileError } = await loadProfile()
 
-  if (!profile?.org_id && email) {
+  if (!profile && email) {
     try {
       await ensureOrgProfile(supabase, userId, email)
       ;({ data: profile, error: profileError } = await loadProfile())
@@ -175,22 +192,31 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
         error:
           err instanceof Error
             ? err.message
-            : "Could not create an organization membership for this user.",
+            : "Could not create a profile for this user.",
       }
     }
   }
 
-  if (profileError || !profile?.org_id) {
-    return {
-      ok: false,
-      error:
-        "No organization profile found for your user. Create an organization membership first.",
-    }
+  if (profileError) {
+    return { ok: false, error: profileError.message }
+  }
+
+  const companies = await getCompanyMemberships(supabase, userId)
+
+  if (!profile?.org_id) {
+    return { ok: false, error: NO_COMPANY_SELECTED }
   }
 
   const role = isUserRole(String(profile.role ?? ""))
     ? (profile.role as UserRole)
     : "requester"
+
+  const active = companies.find((company) => company.id === profile.org_id)
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("id", profile.org_id)
+    .maybeSingle()
 
   return {
     ok: true,
@@ -198,9 +224,11 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
       supabase,
       userId,
       orgId: profile.org_id as string,
+      orgName: org?.name ?? active?.name ?? "Company",
       role,
       email,
       displayName,
+      companies,
     },
   }
 }

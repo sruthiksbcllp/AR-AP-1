@@ -1,10 +1,15 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+import { COMPANY_COOKIE } from "@/lib/auth/company"
 import { getSupabaseEnv } from "@/lib/supabase/env"
 
 function isLoginPath(pathname: string) {
   return pathname === "/login" || pathname.startsWith("/login/")
+}
+
+function isSelectCompanyPath(pathname: string) {
+  return pathname === "/select-company" || pathname.startsWith("/select-company/")
 }
 
 function withCookies(from: NextResponse, to: NextResponse) {
@@ -72,13 +77,23 @@ export async function updateSession(request: NextRequest) {
   // and getClaims() — it can cause intermittent sign-outs.
   const { data } = await supabase.auth.getClaims()
   const isAuthenticated = Boolean(data?.claims?.sub)
+  const hasCompany = Boolean(request.cookies.get(COMPANY_COOKIE)?.value)
 
   if (!isAuthenticated && !isLoginPath(pathname)) {
     return redirectWithCookies(request, supabaseResponse, "/login")
   }
 
   if (isAuthenticated && isLoginPath(pathname)) {
-    return redirectWithCookies(request, supabaseResponse, "/dashboard")
+    return redirectWithCookies(request, supabaseResponse, "/select-company")
+  }
+
+  if (
+    isAuthenticated &&
+    !hasCompany &&
+    !isSelectCompanyPath(pathname) &&
+    !isLoginPath(pathname)
+  ) {
+    return redirectWithCookies(request, supabaseResponse, "/select-company")
   }
 
   return supabaseResponse

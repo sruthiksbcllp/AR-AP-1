@@ -1,7 +1,5 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-
 import {
   extractInvoiceWithAi,
   invoiceExtractUserError,
@@ -64,16 +62,6 @@ function resolveMediaType(file: File) {
   return file.type || "application/octet-stream"
 }
 
-function vendorPlaceholderEmail(name: string) {
-  const slug =
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 40) || "vendor"
-  return `${slug}@vendors.sbcllp.in`
-}
-
 export async function extractBillFromUpload(
   formData: FormData
 ): Promise<ExtractBillResult> {
@@ -83,7 +71,7 @@ export async function extractBillFromUpload(
     return { success: false, error: deniedMessage("extract vendor bills") }
   }
 
-  const { supabase, orgId, userId } = auth.ctx
+  const { supabase, orgId } = auth.ctx
   const file = formData.get("attachment")
 
   if (!(file instanceof File) || file.size === 0) {
@@ -107,6 +95,7 @@ export async function extractBillFromUpload(
     .from("contacts")
     .select("id, name, email, currency")
     .eq("type", "vendor")
+    .eq("vendor_status", "active")
     .eq("org_id", orgId)
 
   if (vendorsError) {
@@ -133,7 +122,6 @@ export async function extractBillFromUpload(
   }
 
   const vendorName = extracted.vendorName.trim()
-  const vendorEmail = extracted.vendorEmail.trim()
   const billNumber = extracted.billNumber.trim() || null
   let dueDate = extracted.dueDate
   if (!dueDate && extracted.invoiceDate) {
@@ -198,7 +186,8 @@ export async function extractBillFromUpload(
     .filter((item): item is ExtractedBillItem => item !== null)
 
   let vendorId: string | null = null
-  let newVendor: ExtractedVendor | null = null
+  const newVendor: ExtractedVendor | null = null
+  let vendorOnboardingNote: string | null = null
 
   if (vendorName) {
     const wanted = normalizeName(vendorName)
@@ -214,49 +203,7 @@ export async function extractBillFromUpload(
     if (match) {
       vendorId = match.id
     } else {
-      const email = vendorEmail.includes("@")
-        ? vendorEmail
-        : vendorPlaceholderEmail(vendorName)
-      const { data: created, error: createError } = await supabase
-        .from("contacts")
-        .insert({
-          org_id: orgId,
-          type: "vendor",
-          name: vendorName,
-          email,
-          phone: extracted.vendorPhone.trim() || null,
-          tax_id: extracted.vendorTaxId.trim() || null,
-          currency: sourceCurrency,
-        })
-        .select("id, name, email, currency")
-        .single()
-
-      if (!createError && created) {
-        vendorId = created.id
-        newVendor = {
-          id: created.id,
-          name: created.name,
-          email: created.email,
-          currency: created.currency,
-        }
-        await supabase.from("audit_logs").insert({
-          org_id: orgId,
-          user_id: userId,
-          action: "contact.create",
-          entity: "contacts",
-          entity_id: created.id,
-          changes_json: {
-            after: {
-              source: "bill-ai",
-              name: vendorName,
-              email,
-            },
-          },
-        })
-        revalidatePath("/dashboard/contacts")
-        revalidatePath("/dashboard/ap")
-        revalidatePath("/dashboard/ap/new")
-      }
+      vendorOnboardingNote = `${vendorName} is not an active vendor. Complete Vendor Onboarding before this bill can be submitted.`
     }
   }
 
@@ -283,6 +230,7 @@ export async function extractBillFromUpload(
     items,
     blockSubmit: extracted.requiresReview || needsReview,
     message: [
+      vendorOnboardingNote,
       extracted.requiresReview
         ? `${extracted.reviewReason || "Invoice totals do not reconcile."} Line items were filled — correct them before submitting.`
         : null,
@@ -292,7 +240,7 @@ export async function extractBillFromUpload(
       !extracted.requiresReview && !needsReview && filled.length
         ? `${fxNote ? `${fxNote} ` : ""}Filled ${filled.join(", ")} from the invoice. Review before submitting.`
         : null,
-      !extracted.requiresReview && !needsReview && !filled.length
+      !extracted.requiresReview && !needsReview && !filled.length && !vendorOnboardingNote
         ? "The file is attached, but invoice details could not be found. Enter them manually."
         : null,
     ]

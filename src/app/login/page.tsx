@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   const session = await getSessionClient()
   if (session.ok) {
-    redirect("/dashboard")
+    redirect("/select-company")
   }
 
   return (

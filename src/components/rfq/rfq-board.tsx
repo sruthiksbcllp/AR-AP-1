@@ -24,12 +24,16 @@ import type { RfqListItem } from "@/types/rfq"
 export function RfqBoard({
   rfqs,
   error,
+  initialTitle = "",
+  prId,
 }: {
   rfqs: RfqListItem[]
   error?: string | null
+  initialTitle?: string
+  prId?: string
 }) {
   const router = useRouter()
-  const [title, setTitle] = React.useState("")
+  const [title, setTitle] = React.useState(initialTitle)
   const [pending, setPending] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
@@ -39,6 +43,7 @@ export function RfqBoard({
     setFormError(null)
     const formData = new FormData()
     formData.set("title", title)
+    if (prId) formData.set("pr_id", prId)
     const result = await createRfq(formData)
     setPending(false)
     if (!result.success) {
@@ -75,8 +80,8 @@ export function RfqBoard({
           <p className="text-sm text-destructive md:col-span-2">{formError}</p>
         ) : (
           <p className="text-xs text-muted-foreground md:col-span-2">
-            Procurement starts here. Add each vendor’s quote on the next screen,
-            then select the lowest.
+            Procurement → RFQ creation → vendor responses → commercial evaluation.
+            After the lowest quote is selected, create a purchase order.
           </p>
         )}
       </form>

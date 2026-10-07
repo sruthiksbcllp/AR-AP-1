@@ -1,6 +1,7 @@
 "use client"
 
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react"
+import Link from "next/link"
+import { Building2, ChevronsUpDown, LogOut, Settings, User } from "lucide-react"
 
 import { signOut } from "@/app/login/actions"
 import { APP_LOGO_SRC, APP_NAME } from "@/lib/brand"
@@ -52,6 +53,12 @@ export function UserNav({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link href="/select-company">
+              <Building2 className="size-4" />
+              Switch company
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem>
             <User className="size-4" />
             Profile

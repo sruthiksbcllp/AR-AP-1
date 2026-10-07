@@ -7,6 +7,8 @@ import {
   BookOpen,
   ScrollText,
   Scale,
+  Workflow,
+  Building2,
   type LucideIcon,
 } from "lucide-react"
 
@@ -40,6 +42,13 @@ export const mainNavItems: NavItem[] = [
     description: "Invoices, collections, and aging",
   },
   {
+    title: "Procure to Pay",
+    href: "/dashboard/p2p",
+    icon: Workflow,
+    module: "p2p",
+    description: "Vendor to payment close",
+  },
+  {
     title: "Request for Quotation",
     href: "/dashboard/rfq",
     icon: Scale,
@@ -65,7 +74,7 @@ export const mainNavItems: NavItem[] = [
     href: "/dashboard/contacts",
     icon: Users,
     module: "contacts",
-    description: "Vendors, clients, and directories",
+    description: "Vendor onboarding and customer directory",
   },
   {
     title: "Accounting",
@@ -80,6 +89,13 @@ export const mainNavItems: NavItem[] = [
     icon: ScrollText,
     module: "audit",
     description: "System activity and compliance trail",
+  },
+  {
+    title: "Admin Portal",
+    href: "/dashboard/admin",
+    icon: Building2,
+    module: "admin",
+    description: "Companies, members, and role tags",
   },
 ]
 

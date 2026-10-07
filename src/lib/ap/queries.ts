@@ -45,6 +45,11 @@ function mapBillRow(row: Record<string, unknown>): BillListItem {
     balance_due: toNumber(row.balance_due),
     status: row.status as BillListItem["status"],
     due_date: row.due_date as string,
+    invoice_date: (row.invoice_date as string | null) ?? null,
+    po_id: (row.po_id as string | null) ?? null,
+    po_number: (row.po_number as string | null) ?? null,
+    match_status: (row.match_status as BillListItem["match_status"]) ?? "not_required",
+    on_hold: Boolean(row.on_hold),
     attachment_path: (row.attachment_path as string | null) ?? null,
     attachment_name: (row.attachment_name as string | null) ?? null,
     attachment_mime: (row.attachment_mime as string | null) ?? null,
@@ -68,6 +73,10 @@ const BILL_SELECT = `
   balance_due,
   status,
   due_date,
+  invoice_date,
+  po_id,
+  match_status,
+  on_hold,
   attachment_path,
   attachment_name,
   attachment_mime,
@@ -96,10 +105,23 @@ export async function getBills(): Promise<BillsQueryResult> {
       return { bills: [], error: error.message }
     }
 
+    const bills = (data ?? []).map((row) =>
+      mapBillRow(row as Record<string, unknown>)
+    )
+    const poIds = [...new Set(bills.map((bill) => bill.po_id).filter(Boolean))] as string[]
+    if (poIds.length) {
+      const { data: pos } = await supabase
+        .from("purchase_orders")
+        .select("id, po_number")
+        .in("id", poIds)
+      const numbers = new Map((pos ?? []).map((po) => [String(po.id), String(po.po_number)]))
+      for (const bill of bills) {
+        if (bill.po_id) bill.po_number = numbers.get(bill.po_id) ?? null
+      }
+    }
+
     return {
-      bills: (data ?? []).map((row) =>
-        mapBillRow(row as Record<string, unknown>)
-      ),
+      bills,
       error: null,
     }
   } catch (error) {
@@ -125,6 +147,7 @@ export async function getVendorOptions(): Promise<VendorsQueryResult> {
       .from("contacts")
       .select("id, name, email, currency")
       .eq("type", "vendor")
+      .eq("vendor_status", "active")
       .order("name", { ascending: true })
 
     if (error) {

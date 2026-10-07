@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
+import { clearSelectedCompanyCookie } from "@/lib/auth/company"
 import { ensureOrgProfile } from "@/lib/auth/org"
 import { parseAssignableRole } from "@/lib/auth/roles"
 import { createClient } from "@/lib/supabase/server"
@@ -46,8 +47,9 @@ export async function signInWithPassword(
     }
   }
 
-  revalidatePath("/dashboard")
-  redirect("/dashboard")
+  await clearSelectedCompanyCookie()
+  revalidatePath("/", "layout")
+  redirect("/select-company")
 }
 
 export async function signUpWithPassword(
@@ -117,8 +119,9 @@ export async function signUpWithPassword(
     }
   }
 
-  revalidatePath("/dashboard")
-  redirect("/dashboard")
+  await clearSelectedCompanyCookie()
+  revalidatePath("/", "layout")
+  redirect("/select-company")
 }
 
 export async function signOut() {
@@ -127,6 +130,7 @@ export async function signOut() {
     await supabase.auth.signOut()
   }
 
-  revalidatePath("/dashboard")
+  await clearSelectedCompanyCookie()
+  revalidatePath("/", "layout")
   redirect("/login")
 }

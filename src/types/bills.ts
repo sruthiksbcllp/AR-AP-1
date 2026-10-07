@@ -24,6 +24,11 @@ export type BillListItem = {
   balance_due: number
   status: BillStatus
   due_date: string
+  invoice_date: string | null
+  po_id: string | null
+  po_number: string | null
+  match_status: "not_required" | "pending" | "pass" | "exception" | "waived"
+  on_hold: boolean
   attachment_path: string | null
   attachment_name: string | null
   attachment_mime: string | null

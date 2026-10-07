@@ -8,7 +8,6 @@ import { Loader2, Plus, Trash2, Upload } from "lucide-react"
 import { createBill } from "@/app/dashboard/ap/actions"
 import { extractBillFromUpload } from "@/app/dashboard/ap/extract"
 import { VendorCombobox } from "@/components/ap/vendor-combobox"
-import { NewContactSheet } from "@/components/contacts/new-contact-sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -57,6 +56,8 @@ type BillCreateFormProps = {
   initialVendorId?: string
   initialDescription?: string
   initialAmount?: string
+  purchaseOrders?: { id: string; po_number: string; vendor_id: string }[]
+  initialPoId?: string
 }
 
 function createEmptyLine(): LineItemDraft {
@@ -90,6 +91,8 @@ export function BillCreateForm({
   initialVendorId = "",
   initialDescription = "",
   initialAmount = "",
+  purchaseOrders = [],
+  initialPoId = "",
 }: BillCreateFormProps) {
   const router = useRouter()
   const [pending, setPending] = React.useState(false)
@@ -100,6 +103,10 @@ export function BillCreateForm({
   )
   const [billNumber, setBillNumber] = React.useState("")
   const [dueDate, setDueDate] = React.useState("")
+  const [invoiceDate, setInvoiceDate] = React.useState("")
+  const [poId, setPoId] = React.useState(
+    purchaseOrders.some((po) => po.id === initialPoId) ? initialPoId : ""
+  )
   const [attachment, setAttachment] = React.useState<File | null>(null)
   const [extracting, setExtracting] = React.useState(false)
   const [extractNote, setExtractNote] = React.useState<string | null>(null)
@@ -133,8 +140,14 @@ export function BillCreateForm({
   }, [vendors])
 
   React.useEffect(() => {
+    const po = purchaseOrders.find((row) => row.id === poId)
+    if (po) setVendorId(po.vendor_id)
+  }, [poId, purchaseOrders])
+
+  React.useEffect(() => {
     setBillNumber((current) => current || suggestBillNumber())
     setDueDate((current) => current || addDaysInputValue(30))
+    setInvoiceDate((current) => current || addDaysInputValue(0))
   }, [])
 
   const computedLines = lines.map((line) => {
@@ -262,6 +275,8 @@ export function BillCreateForm({
     formData.set("vendor_id", vendorId)
     formData.set("bill_number", billNumber.trim())
     formData.set("due_date", dueDate)
+    formData.set("invoice_date", invoiceDate)
+    if (poId) formData.set("po_id", poId)
     formData.set("save_as_draft", String(saveAsDraft))
     formData.set(
       "items",
@@ -321,34 +336,9 @@ export function BillCreateForm({
         <div className="space-y-2 md:col-span-2 xl:col-span-1">
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="vendor_id">Vendor</Label>
-            <NewContactSheet
-              defaultType="vendor"
-              lockType
-              onCreated={(contact) => {
-                if (contact.type !== "vendor") return
-                setVendorOptions((prev) => {
-                  if (prev.some((vendor) => vendor.id === contact.id)) {
-                    return prev
-                  }
-                  return [
-                    ...prev,
-                    {
-                      id: contact.id,
-                      name: contact.name,
-                      email: contact.email,
-                      currency: contact.currency,
-                    },
-                  ].sort((a, b) => a.name.localeCompare(b.name))
-                })
-                setVendorId(contact.id)
-              }}
-              trigger={
-                <Button type="button" variant="ghost" size="sm" className="h-7 px-2">
-                  <Plus />
-                  Add vendor
-                </Button>
-              }
-            />
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" asChild>
+              <Link href="/dashboard/contacts/vendors/new">Onboard vendor</Link>
+            </Button>
           </div>
           <VendorCombobox
             vendors={vendorOptions}
@@ -358,30 +348,41 @@ export function BillCreateForm({
           />
           {vendorOptions.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              No vendors yet. Click <span className="font-medium">Add vendor</span>{" "}
-              and enter the vendor name, or add one under{" "}
+              Only created vendors can be billed. Complete{" "}
               <Link
                 href="/dashboard/contacts"
                 className="underline underline-offset-2"
               >
-                Contacts
-              </Link>
-              .
+                Vendor Onboarding
+              </Link>{" "}
+              first.
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Type to search an existing vendor, or add a new name with Add
-              vendor.
+              Type to search an active vendor. New suppliers must finish
+              onboarding before they appear here.
             </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bill_number">Bill number</Label>
+          <Label htmlFor="bill_number">Invoice number</Label>
           <Input
             id="bill_number"
             value={billNumber}
             onChange={(event) => setBillNumber(event.target.value)}
+            required
+            disabled={busy}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="invoice_date">Invoice date</Label>
+          <Input
+            id="invoice_date"
+            type="date"
+            value={invoiceDate}
+            onChange={(event) => setInvoiceDate(event.target.value)}
             required
             disabled={busy}
           />
@@ -397,6 +398,33 @@ export function BillCreateForm({
             required
             disabled={busy}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>PO reference</Label>
+          <Select
+            value={poId || "none"}
+            onValueChange={(value) => {
+              if (!value) return
+              const next = value === "none" ? "" : value
+              setPoId(next)
+              const po = purchaseOrders.find((row) => row.id === next)
+              if (po && !vendorId) setVendorId(po.vendor_id)
+            }}
+            disabled={busy}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select PO" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No PO</SelectItem>
+              {purchaseOrders.map((po) => (
+                <SelectItem key={po.id} value={po.id}>
+                  {po.po_number}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2 md:col-span-2 xl:col-span-3">

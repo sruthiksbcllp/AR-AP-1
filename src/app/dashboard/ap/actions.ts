@@ -111,12 +111,35 @@ export async function createBill(formData: FormData): Promise<ActionResult> {
 
   const vendor_id = String(formData.get("vendor_id") ?? "").trim()
   const bill_number = String(formData.get("bill_number") ?? "").trim()
+  const po_id = String(formData.get("po_id") ?? "").trim() || null
   const saveAsDraft = String(formData.get("save_as_draft") ?? "") === "true"
   const due = parseDate(String(formData.get("due_date") ?? ""), "Due date")
   if ("error" in due) return { success: false, error: due.error }
+  const invoiceRaw = String(formData.get("invoice_date") ?? "").trim()
+  const invoice = invoiceRaw
+    ? parseDate(invoiceRaw, "Invoice date")
+    : { value: new Date().toISOString().slice(0, 10) }
+  if ("error" in invoice) return { success: false, error: invoice.error }
 
   if (!vendor_id) return { success: false, error: "Select a vendor." }
   if (!bill_number) return { success: false, error: "Bill number is required." }
+
+  const { data: vendor, error: vendorError } = await supabase
+    .from("contacts")
+    .select("id, type, vendor_status")
+    .eq("id", vendor_id)
+    .maybeSingle()
+
+  if (vendorError || !vendor) {
+    return { success: false, error: vendorError?.message ?? "Select a vendor." }
+  }
+  if (vendor.type !== "vendor" || vendor.vendor_status !== "active") {
+    return {
+      success: false,
+      error:
+        "This supplier is not an active vendor. Complete Vendor Onboarding first.",
+    }
+  }
 
   const items = parseLineItemsJson(String(formData.get("items") ?? "[]"))
   if ("error" in items) return { success: false, error: items.error }
@@ -172,6 +195,20 @@ export async function createBill(formData: FormData): Promise<ActionResult> {
     attachment_mime = file.type || null
   }
 
+  if (po_id) {
+    const { data: po } = await supabase
+      .from("purchase_orders")
+      .select("id, vendor_id, status")
+      .eq("id", po_id)
+      .maybeSingle()
+    if (!po || (po.status !== "released" && po.status !== "approved" && po.status !== "closed")) {
+      return { success: false, error: "Select a released purchase order." }
+    }
+    if (po.vendor_id !== vendor_id) {
+      return { success: false, error: "The invoice vendor must match the purchase order vendor." }
+    }
+  }
+
   const { data: bill, error: billError } = await supabase
     .from("bills")
     .insert({
@@ -182,6 +219,9 @@ export async function createBill(formData: FormData): Promise<ActionResult> {
       balance_due: total_amount,
       status,
       due_date: due.value,
+      invoice_date: invoice.value,
+      po_id,
+      match_status: po_id ? "pending" : "not_required",
       attachment_path,
       attachment_name,
       attachment_mime,
@@ -261,6 +301,9 @@ export async function createBill(formData: FormData): Promise<ActionResult> {
 
   revalidatePath("/dashboard/ap")
   revalidatePath("/dashboard/approvals")
+  revalidatePath("/dashboard/p2p")
+  revalidatePath("/dashboard/p2p/match")
+  revalidatePath("/dashboard/p2p/payments")
   revalidatePath("/ap")
   revalidatePath("/approvals")
 
@@ -417,6 +460,9 @@ export async function decideBillApproval(input: {
 
   revalidatePath("/dashboard/ap")
   revalidatePath("/dashboard/approvals")
+  revalidatePath("/dashboard/p2p")
+  revalidatePath("/dashboard/p2p/match")
+  revalidatePath("/dashboard/p2p/payments")
   revalidatePath("/ap")
   revalidatePath("/approvals")
 

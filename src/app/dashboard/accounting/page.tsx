@@ -26,7 +26,7 @@ const masterData: DiagramCell[] = [
 ]
 
 const transactionModules: DiagramCell[] = [
-  { label: "P2P", href: "/dashboard/ap" },
+  { label: "P2P", href: "/dashboard/p2p" },
   { label: "O2C", href: "/dashboard/ar" },
   { label: "Payroll" },
   { label: "Fixed Assets" },
@@ -114,7 +114,11 @@ export default function AccountingPage() {
             <div className="bg-white px-4 py-3 text-left align-top text-[14px] text-[#1A1A1A]">
               <p>Where business transactions originate.</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
-                <li>Vendor onboarding</li>
+                <li>
+                  <Link href="/dashboard/contacts" className="underline underline-offset-2">
+                    Vendor onboarding
+                  </Link>
+                </li>
                 <li>Purchase requests</li>
                 <li>Purchase orders</li>
                 <li>Invoice processing</li>

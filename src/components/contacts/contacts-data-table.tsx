@@ -19,13 +19,6 @@ import { NewContactSheet } from "@/components/contacts/new-contact-sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Table,
   TableBody,
   TableCell,
@@ -78,39 +71,18 @@ export function ContactsDataTable({ data, error }: ContactsDataTableProps) {
     },
   })
 
-  const typeFilter =
-    (table.getColumn("type")?.getFilterValue() as string | undefined) ?? "all"
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <Input
-            placeholder="Search contacts…"
+            placeholder="Search customers…"
             value={globalFilter}
             onChange={(event) => setGlobalFilter(event.target.value)}
             className="max-w-sm"
           />
-          <Select
-            value={typeFilter}
-            onValueChange={(value) => {
-              if (!value) return
-              table
-                .getColumn("type")
-                ?.setFilterValue(value === "all" ? undefined : value)
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="Filter by type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-              <SelectItem value="vendor">Vendor</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-        <NewContactSheet />
+        <NewContactSheet defaultType="customer" lockType />
       </div>
 
       {error ? (
@@ -159,7 +131,7 @@ export function ContactsDataTable({ data, error }: ContactsDataTableProps) {
                   colSpan={contactColumns.length}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  No contacts found. Create your first customer or vendor.
+                  No customers found. Create your first customer.
                 </TableCell>
               </TableRow>
             )}
@@ -169,7 +141,7 @@ export function ContactsDataTable({ data, error }: ContactsDataTableProps) {
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} contact
+          {table.getFilteredRowModel().rows.length} customer
           {table.getFilteredRowModel().rows.length === 1 ? "" : "s"}
           {" · "}
           Page {table.getState().pagination.pageIndex + 1} of{" "}

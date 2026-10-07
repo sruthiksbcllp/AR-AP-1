@@ -28,12 +28,14 @@ export async function createRfq(formData: FormData): Promise<RfqActionResult> {
   if (!canCreateRfq(role)) {
     return { success: false, error: deniedMessage("create a request for quotation") }
   }
+  const prId = String(formData.get("pr_id") ?? "").trim() || null
   const { data, error } = await supabase
     .from("rfqs")
     .insert({
       org_id: orgId,
       title,
       created_by: userId,
+      pr_id: prId,
     })
     .select("id")
     .single()
@@ -51,7 +53,17 @@ export async function createRfq(formData: FormData): Promise<RfqActionResult> {
     changes_json: { after: { title } },
   })
 
+  if (prId) {
+    await supabase
+      .from("purchase_requisitions")
+      .update({ status: "in_procurement" })
+      .eq("id", prId)
+      .eq("status", "approved")
+  }
+
   revalidatePath("/dashboard/rfq")
+  revalidatePath("/dashboard/p2p")
+  revalidatePath("/dashboard/p2p/pr")
   return { success: true, id: data.id }
 }
 
@@ -83,6 +95,22 @@ export async function addRfqQuote(formData: FormData): Promise<RfqActionResult> 
   }
   if (rfq.status !== "open") {
     return { success: false, error: "This request is already evaluated." }
+  }
+
+  const { data: vendor, error: vendorLookupError } = await supabase
+    .from("contacts")
+    .select("id, type, vendor_status")
+    .eq("id", vendorId)
+    .maybeSingle()
+  if (vendorLookupError || !vendor) {
+    return { success: false, error: vendorLookupError?.message ?? "Choose a vendor." }
+  }
+  if (vendor.type !== "vendor" || vendor.vendor_status !== "active") {
+    return {
+      success: false,
+      error:
+        "This supplier is not an active vendor. Complete Vendor Onboarding first.",
+    }
   }
 
   const { data, error } = await supabase

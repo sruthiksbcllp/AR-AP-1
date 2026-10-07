@@ -23,8 +23,10 @@ import {
 
 export function AppSidebar({
   role,
+  orgName,
 }: {
   role: UserRole
+  orgName?: string
 }) {
   const pathname = usePathname()
   const items = mainNavItems.filter((item) => canAccessModule(role, item.module))
@@ -42,7 +44,7 @@ export function AppSidebar({
                     {APP_NAME}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {APP_TAGLINE}
+                    {orgName ?? APP_TAGLINE}
                   </span>
                 </div>
               </Link>

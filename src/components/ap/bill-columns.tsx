@@ -43,6 +43,14 @@ export const billColumns: LegacyColumnDef<BillListItem>[] = [
     ),
   },
   {
+    id: "po",
+    accessorFn: (row) => row.po_number ?? "",
+    header: "PO",
+    cell: ({ row }) => (
+      <span className="text-sm">{row.original.po_number ?? "—"}</span>
+    ),
+  },
+  {
     accessorKey: "status",
     header: "Status",
     filterFn: (row, id, value) => {
@@ -66,6 +74,17 @@ export const billColumns: LegacyColumnDef<BillListItem>[] = [
     cell: ({ row }) => (
       <span className="font-medium tabular-nums">
         {formatINR(row.original.balance_due)}
+      </span>
+    ),
+  },
+  {
+    id: "match",
+    accessorFn: (row) => row.match_status,
+    header: "Match",
+    cell: ({ row }) => (
+      <span className="text-xs uppercase text-muted-foreground">
+        {row.original.on_hold ? "HOLD · " : ""}
+        {row.original.match_status.replaceAll("_", " ")}
       </span>
     ),
   },
