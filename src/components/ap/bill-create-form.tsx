@@ -7,6 +7,7 @@ import { Loader2, Plus, Trash2, Upload } from "lucide-react"
 
 import { createBill } from "@/app/dashboard/ap/actions"
 import { extractBillFromUpload } from "@/app/dashboard/ap/extract"
+import { VendorCombobox } from "@/components/ap/vendor-combobox"
 import { NewContactSheet } from "@/components/contacts/new-contact-sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -97,8 +98,8 @@ export function BillCreateForm({
   const [vendorId, setVendorId] = React.useState(() =>
     vendors.some((vendor) => vendor.id === initialVendorId) ? initialVendorId : ""
   )
-  const [billNumber, setBillNumber] = React.useState(suggestBillNumber)
-  const [dueDate, setDueDate] = React.useState(() => addDaysInputValue(30))
+  const [billNumber, setBillNumber] = React.useState("")
+  const [dueDate, setDueDate] = React.useState("")
   const [attachment, setAttachment] = React.useState<File | null>(null)
   const [extracting, setExtracting] = React.useState(false)
   const [extractNote, setExtractNote] = React.useState<string | null>(null)
@@ -130,6 +131,11 @@ export function BillCreateForm({
   React.useEffect(() => {
     setVendorOptions(vendors)
   }, [vendors])
+
+  React.useEffect(() => {
+    setBillNumber((current) => current || suggestBillNumber())
+    setDueDate((current) => current || addDaysInputValue(30))
+  }, [])
 
   const computedLines = lines.map((line) => {
     const quantity = Number(line.quantity) || 0
@@ -343,25 +349,12 @@ export function BillCreateForm({
               }
             />
           </div>
-          <Select
+          <VendorCombobox
+            vendors={vendorOptions}
             value={vendorId}
-            onValueChange={(value) => {
-              if (value) setVendorId(value)
-            }}
-            disabled={busy || vendorOptions.length === 0}
-          >
-            <SelectTrigger id="vendor_id" className="w-full">
-              <SelectValue placeholder="Select vendor" />
-            </SelectTrigger>
-            <SelectContent>
-              {vendorOptions.map((vendor) => (
-                <SelectItem key={vendor.id} value={vendor.id}>
-                  {vendor.name}
-                  {vendor.email ? ` · ${vendor.email}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={setVendorId}
+            disabled={busy}
+          />
           {vendorOptions.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               No vendors yet. Click <span className="font-medium">Add vendor</span>{" "}
@@ -376,7 +369,8 @@ export function BillCreateForm({
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Pick an existing vendor, or add a new name with Add vendor.
+              Type to search an existing vendor, or add a new name with Add
+              vendor.
             </p>
           )}
         </div>
@@ -619,13 +613,13 @@ export function BillCreateForm({
         <Button
           type="button"
           variant="secondary"
-          disabled={busy || blockSubmit || vendorOptions.length === 0}
+          disabled={busy || blockSubmit || !vendorId}
           onClick={() => void submit(true)}
         >
           {pending ? <Loader2 className="animate-spin" /> : null}
           Save draft
         </Button>
-        <Button type="submit" disabled={busy || blockSubmit || vendorOptions.length === 0}>
+        <Button type="submit" disabled={busy || blockSubmit || !vendorId}>
           {pending ? (
             <>
               <Loader2 className="animate-spin" />
