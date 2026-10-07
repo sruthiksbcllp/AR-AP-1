@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { ensureOrgProfile } from "@/lib/auth/org"
+import { parseAssignableRole } from "@/lib/auth/roles"
 import { createClient } from "@/lib/supabase/server"
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 
@@ -59,12 +60,16 @@ export async function signUpWithPassword(
 
   const email = String(formData.get("email") ?? "").trim()
   const password = String(formData.get("password") ?? "")
+  const role = parseAssignableRole(formData.get("role"))
 
   if (!email || !password) {
     return { success: false, error: "Email and password are required." }
   }
   if (password.length < 6) {
     return { success: false, error: "Password must be at least 6 characters." }
+  }
+  if (!role) {
+    return { success: false, error: "Select a role." }
   }
 
   const supabase = await createClient()
@@ -104,7 +109,7 @@ export async function signUpWithPassword(
   }
 
   try {
-    await ensureOrgProfile(supabase, user.id, user.email ?? email)
+    await ensureOrgProfile(supabase, user.id, user.email ?? email, role)
   } catch (err) {
     return {
       success: false,

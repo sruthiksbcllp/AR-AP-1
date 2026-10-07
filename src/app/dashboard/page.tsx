@@ -7,6 +7,7 @@ import { HighPriorityOverdueList } from "@/components/dashboard/high-priority-ov
 import { OverviewKpiCards } from "@/components/dashboard/overview-kpi-cards"
 import { PageShell } from "@/components/layout/page-shell"
 import { Button } from "@/components/ui/button"
+import { getLoggedInDisplayName } from "@/lib/auth/org"
 import {
   getAuditTrail,
   getExecutiveOverview,
@@ -17,14 +18,16 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardOverviewPage() {
-  const [overview, audit] = await Promise.all([
+  const [overview, audit, displayName] = await Promise.all([
     getExecutiveOverview(),
     getAuditTrail(8),
+    getLoggedInDisplayName(),
   ])
 
   return (
     <PageShell
       title="Executive overview"
+      greeting={`Welcome, ${displayName}!`}
       description="Outstanding AR/AP, working capital, aging risk, and compliance activity."
     >
       {overview.error ? (

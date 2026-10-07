@@ -2,14 +2,20 @@ import { randomUUID } from "crypto"
 
 import { isSupabaseConfigured } from "@/lib/supabase/env"
 import { createClient } from "@/lib/supabase/server"
+import {
+  isUserRole,
+  type UserRole,
+} from "@/lib/auth/roles"
 
-export type UserRole = "admin" | "manager" | "accountant" | "auditor"
+export type { UserRole }
 
 export type OrgContext = {
   supabase: Awaited<ReturnType<typeof createClient>>
   userId: string
   orgId: string
   role: UserRole
+  email: string
+  displayName: string
 }
 
 export type OrgContextResult =
@@ -25,17 +31,61 @@ type SessionClientResult =
       supabase: Awaited<ReturnType<typeof createClient>>
       userId: string
       email: string
+      displayName: string
     }
   | { ok: false; error: string }
 
 function claimString(value: unknown) {
-  return typeof value === "string" ? value : ""
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function metadataRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "string") {
+    try {
+      return metadataRecord(JSON.parse(value) as unknown)
+    } catch {
+      return null
+    }
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+  return value as Record<string, unknown>
+}
+
+function displayNameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? ""
+  const formatted = local
+    .split(/[._+\-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ")
+  return formatted || "there"
+}
+
+export function displayNameFromProfile(input: {
+  email: string
+  metadata?: unknown
+}) {
+  const metadata = metadataRecord(input.metadata)
+  const fromMetadata =
+    claimString(metadata?.full_name) ||
+    claimString(metadata?.name) ||
+    claimString(metadata?.display_name)
+  if (fromMetadata) return fromMetadata
+  return displayNameFromEmail(input.email)
+}
+
+export async function getLoggedInDisplayName() {
+  const session = await getSessionClient()
+  return session.ok ? session.displayName : "there"
 }
 
 export async function ensureOrgProfile(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-  email: string
+  email: string,
+  role: UserRole = "admin"
 ) {
   const { data: existing } = await supabase
     .from("users")
@@ -63,7 +113,7 @@ export async function ensureOrgProfile(
     id: userId,
     org_id: orgId,
     email,
-    role: "admin",
+    role,
   })
 
   if (profileError) {
@@ -89,11 +139,18 @@ export async function getSessionClient(): Promise<SessionClientResult> {
     return { ok: false, error: SIGN_IN_REQUIRED }
   }
 
+  const email = claimString(claimsData?.claims?.email)
+  const claims = metadataRecord(claimsData?.claims)
+
   return {
     ok: true,
     supabase,
     userId,
-    email: claimString(claimsData?.claims?.email),
+    email,
+    displayName: displayNameFromProfile({
+      email,
+      metadata: claims?.user_metadata,
+    }),
   }
 }
 
@@ -101,7 +158,7 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
   const session = await getSessionClient()
   if (!session.ok) return session
 
-  const { supabase, userId, email } = session
+  const { supabase, userId, email, displayName } = session
 
   const loadProfile = () =>
     supabase.from("users").select("org_id, role").eq("id", userId).maybeSingle()
@@ -131,17 +188,25 @@ export async function requireOrgContext(): Promise<OrgContextResult> {
     }
   }
 
+  const role = isUserRole(String(profile.role ?? ""))
+    ? (profile.role as UserRole)
+    : "requester"
+
   return {
     ok: true,
     ctx: {
       supabase,
       userId,
       orgId: profile.org_id as string,
-      role: profile.role as UserRole,
+      role,
+      email,
+      displayName,
     },
   }
 }
 
-export function canApproveBills(role: UserRole) {
-  return role === "admin" || role === "manager"
-}
+export {
+  canApproveBills,
+  canApproveBillAmount,
+  canReviewApprovals,
+} from "@/lib/auth/roles"

@@ -16,7 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export function UserNav() {
+export function UserNav({
+  displayName = "Workspace user",
+  roleLabel = APP_NAME,
+}: {
+  displayName?: string
+  roleLabel?: string
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -29,9 +35,9 @@ export function UserNav() {
             <AvatarFallback className="rounded-lg text-xs">SBC</AvatarFallback>
           </Avatar>
           <div className="hidden min-w-0 flex-1 text-left text-sm leading-tight md:grid">
-            <span className="truncate font-medium">Workspace user</span>
+            <span className="truncate font-medium">{displayName}</span>
             <span className="truncate text-xs text-muted-foreground">
-              {APP_NAME}
+              {roleLabel}
             </span>
           </div>
           <ChevronsUpDown className="ml-auto hidden size-3.5 opacity-50 md:block" />
@@ -40,8 +46,8 @@ export function UserNav() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">{APP_NAME}</p>
-            <p className="text-xs text-muted-foreground">Account menu</p>
+            <p className="text-sm font-medium">{displayName}</p>
+            <p className="text-xs text-muted-foreground">{roleLabel}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

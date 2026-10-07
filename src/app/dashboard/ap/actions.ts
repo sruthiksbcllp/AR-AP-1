@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache"
 
 import { postVendorBillJournal } from "@/lib/accounting/post"
-import { canApproveBills, requireOrgContext } from "@/lib/auth/org"
+import { requireOrgContext } from "@/lib/auth/org"
+import {
+  canApproveBillAmount,
+  canReviewApprovals,
+  canWriteAp,
+  deniedMessage,
+} from "@/lib/auth/roles"
 import {
   BILL_APPROVAL_THRESHOLD,
   calcLineTotal,
@@ -97,7 +103,11 @@ export async function createBill(formData: FormData): Promise<ActionResult> {
   const auth = await requireOrgContext()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const { supabase, userId, orgId } = auth.ctx
+  const { supabase, userId, orgId, role } = auth.ctx
+
+  if (!canWriteAp(role)) {
+    return { success: false, error: deniedMessage("create vendor bills") }
+  }
 
   const vendor_id = String(formData.get("vendor_id") ?? "").trim()
   const bill_number = String(formData.get("bill_number") ?? "").trim()
@@ -267,10 +277,10 @@ export async function decideBillApproval(input: {
 
   const { supabase, userId, orgId, role } = auth.ctx
 
-  if (!canApproveBills(role)) {
+  if (!canReviewApprovals(role)) {
     return {
       success: false,
-      error: "Only managers and admins can approve or reject bills.",
+      error: deniedMessage("approve or reject bills"),
     }
   }
 
@@ -304,6 +314,14 @@ export async function decideBillApproval(input: {
     return {
       success: false,
       error: "Only bills pending approval can be reviewed.",
+    }
+  }
+
+  const amount = Number(bill.total_amount) || 0
+  if (!canApproveBillAmount(role, amount)) {
+    return {
+      success: false,
+      error: `Managers can approve bills up to ₹50,000. Director / CFO approval is required for this amount.`,
     }
   }
 

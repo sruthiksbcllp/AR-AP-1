@@ -8,6 +8,11 @@ import {
 } from "@/lib/accounting/post"
 import { requireOrgContext } from "@/lib/auth/org"
 import {
+  canRecordArPayment,
+  canWriteAr,
+  deniedMessage,
+} from "@/lib/auth/roles"
+import {
   calcLineTotal,
   nextInvoiceStatusAfterPayment,
   roundMoney,
@@ -83,7 +88,11 @@ export async function createInvoice(
   const auth = await requireOrgContext()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const { supabase, userId, orgId } = auth.ctx
+  const { supabase, userId, orgId, role } = auth.ctx
+
+  if (!canWriteAr(role)) {
+    return { success: false, error: deniedMessage("create customer invoices") }
+  }
 
   const customer_id = String(input.customer_id ?? "").trim()
   const invoice_number = String(input.invoice_number ?? "").trim()
@@ -202,7 +211,11 @@ export async function recordInvoicePayment(
   const auth = await requireOrgContext()
   if (!auth.ok) return { success: false, error: auth.error }
 
-  const { supabase, userId, orgId } = auth.ctx
+  const { supabase, userId, orgId, role } = auth.ctx
+
+  if (!canRecordArPayment(role)) {
+    return { success: false, error: deniedMessage("record customer receipts") }
+  }
 
   const invoice_id = String(input.invoice_id ?? "").trim()
   const payment_method = String(input.payment_method ?? "").trim()

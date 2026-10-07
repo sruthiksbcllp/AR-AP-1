@@ -18,8 +18,8 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { formatINR } from "@/lib/currency"
+import { roleLabel } from "@/lib/auth/roles"
 import type { BillListItem } from "@/types/bills"
-import { BILL_APPROVAL_THRESHOLD } from "@/types/bills"
 
 type ApprovalDecisionDialogProps = {
   bill: BillListItem
@@ -165,10 +165,10 @@ export function ApprovalsPanel({
       <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
         <p className="text-sm font-medium">Approvals restricted</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Only users with the <span className="font-medium">manager</span> or{" "}
-          <span className="font-medium">admin</span> role can review pending
-          bills.
-          {role ? ` Your role: ${role}.` : ""}
+          Only a <span className="font-medium">Manager</span> (up to ₹50,000)
+          or <span className="font-medium">Director / CFO</span> can review
+          pending bills.
+          {role ? ` Your role: ${roleLabel(role)}.` : ""}
         </p>
       </div>
     )
@@ -177,8 +177,8 @@ export function ApprovalsPanel({
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-        Showing bills pending approval (totals above{" "}
-        {formatINR(BILL_APPROVAL_THRESHOLD)}).
+        Pending vendor bills. Managers can approve up to ₹50,000. Larger bills
+        need Director / CFO.
       </div>
 
       {error ? (

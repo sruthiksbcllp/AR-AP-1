@@ -14,7 +14,7 @@ export default async function ApprovalsPage() {
   return (
     <PageShell
       title="Approval Center"
-      description="Review vendor bills awaiting manager or admin decision."
+      description="Review vendor bills awaiting Manager or Director / CFO decision."
     >
       <ApprovalsPanel
         bills={bills}
