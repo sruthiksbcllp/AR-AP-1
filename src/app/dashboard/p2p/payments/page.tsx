@@ -13,7 +13,7 @@ import {
 import { getPayableBills, getPaymentProposals } from "@/lib/p2p/queries"
 import { formatINR } from "@/lib/currency"
 
-export const metadata: Metadata = { title: "Payment processing" }
+export const metadata: Metadata = { title: "Payments" }
 
 export default async function PaymentsPage() {
   const [{ rows, error }, payable, auth] = await Promise.all([
@@ -25,8 +25,8 @@ export default async function PaymentsPage() {
 
   return (
     <PageShell
-      title="Payment processing"
-      description="Due invoice → payment proposal → finance approval → bank payment → payment confirmation."
+      title="Payments"
+      description="Due invoice, payment proposal, finance approval, bank payment, and payment confirmation."
     >
       <P2pNav />
       <ol className="grid gap-2 sm:grid-cols-5">
@@ -83,7 +83,7 @@ export default async function PaymentsPage() {
         </table>
       </div>
       <section className="rounded-xl border p-4 text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">P2P completion</p>
+        <p className="font-medium text-foreground">When payment is confirmed</p>
         <ul className="mt-2 list-disc pl-5">
           <li>PO closed</li>
           <li>Invoice closed</li>

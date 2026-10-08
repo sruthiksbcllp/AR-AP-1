@@ -34,12 +34,24 @@ export default async function PrDetailPage({
   const role = auth.ok ? auth.ctx.role : null
   const canApprove = role && canApprovePr(role) && pr.status === "pending_manager"
   const canRfq = role && canCreateRfq(role) && pr.status === "approved"
-  const canPo = role && canCreatePo(role) && (pr.status === "approved" || pr.status === "in_procurement")
+  const vendorReady = pr.vendor_status === "active"
+  const canPo =
+    role &&
+    canCreatePo(role) &&
+    vendorReady &&
+    (pr.status === "approved" || pr.status === "in_procurement")
+  const poHref = pr.vendor_id
+    ? `/dashboard/p2p/po/new?pr=${pr.id}&vendor=${pr.vendor_id}`
+    : `/dashboard/p2p/po/new?pr=${pr.id}`
 
   return (
     <PageShell title={pr.pr_number} description={`${pr.department} · ${pr.cost_center}`}>
       <P2pNav />
       <dl className="grid gap-3 rounded-xl border p-4 sm:grid-cols-3">
+        <div>
+          <dt className="text-sm text-muted-foreground">Vendor</dt>
+          <dd>{pr.vendor_name ?? "—"}</dd>
+        </div>
         <div>
           <dt className="text-sm text-muted-foreground">Requester</dt>
           <dd>{pr.requester_email ?? "—"}</dd>
@@ -94,8 +106,17 @@ export default async function PrDetailPage({
         ) : null}
         {canPo ? (
           <Button asChild>
-            <Link href={`/dashboard/p2p/po/new?pr=${pr.id}`}>Create PO</Link>
+            <Link href={poHref}>Create PO</Link>
           </Button>
+        ) : null}
+        {role &&
+        canCreatePo(role) &&
+        (pr.status === "approved" || pr.status === "in_procurement") &&
+        !vendorReady ? (
+          <p className="w-full text-sm text-muted-foreground">
+            Finish vendor onboarding so {pr.vendor_name ?? "this supplier"} is Vendor
+            Created, then issue the purchase order.
+          </p>
         ) : null}
       </div>
     </PageShell>

@@ -26,7 +26,7 @@ const masterData: DiagramCell[] = [
 ]
 
 const transactionModules: DiagramCell[] = [
-  { label: "P2P", href: "/dashboard/p2p" },
+  { label: "Accounts Payable", href: "/dashboard/p2p" },
   { label: "O2C", href: "/dashboard/ar" },
   { label: "Payroll" },
   { label: "Fixed Assets" },

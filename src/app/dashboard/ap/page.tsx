@@ -21,8 +21,8 @@ export default async function AccountsPayablePage() {
 
   return (
     <PageShell
-      title="Accounts Payable Management"
-      description="The AP team manages outstanding vendor balances, due dates, ageing, holds, payment proposals, and reconciliations."
+      title="Accounts Payable"
+      description="Outstanding vendor balances, due dates, ageing, holds, and reconciliations."
     >
       <P2pNav />
       <ApManagement bills={bills} canHold={canHold} />

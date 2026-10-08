@@ -37,6 +37,7 @@ export default async function PrListPage() {
           <thead className="bg-muted/40 text-left">
             <tr>
               <th className="px-3 py-2 font-medium">PR number</th>
+              <th className="px-3 py-2 font-medium">Vendor</th>
               <th className="px-3 py-2 font-medium">Department</th>
               <th className="px-3 py-2 font-medium">Cost center</th>
               <th className="px-3 py-2 font-medium">Status</th>
@@ -46,7 +47,7 @@ export default async function PrListPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
                   No purchase requisitions yet.
                 </td>
               </tr>
@@ -58,6 +59,7 @@ export default async function PrListPage() {
                       {row.pr_number}
                     </Link>
                   </td>
+                  <td className="px-3 py-2">{row.vendor_name ?? "—"}</td>
                   <td className="px-3 py-2">{row.department}</td>
                   <td className="px-3 py-2">{row.cost_center}</td>
                   <td className="px-3 py-2 capitalize">{row.status.replaceAll("_", " ")}</td>

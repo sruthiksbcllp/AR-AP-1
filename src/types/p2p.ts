@@ -1,3 +1,5 @@
+import type { VendorStatus } from "@/types/contacts"
+
 export type ItemKind = "goods" | "service"
 
 export type CatalogItem = {
@@ -40,6 +42,9 @@ export type PurchaseRequisition = {
   department: string
   cost_center: string
   requester_id: string | null
+  vendor_id: string | null
+  vendor_name: string | null
+  vendor_status: VendorStatus | null
   need_by_date: string | null
   business_justification: string
   estimated_cost: number

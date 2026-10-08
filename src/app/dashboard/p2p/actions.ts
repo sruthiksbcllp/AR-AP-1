@@ -98,12 +98,32 @@ export async function createPurchaseRequisition(formData: FormData): Promise<P2p
   const cost_center = field(formData, "cost_center")
   const justification = field(formData, "business_justification")
   const need_by_date = field(formData, "need_by_date") || null
+  const vendor_id = field(formData, "vendor_id")
   const item_id = field(formData, "item_id")
   const description = field(formData, "description")
   const quantity = Number(field(formData, "quantity"))
   const estimated_unit_cost = roundMoney(Number(field(formData, "estimated_unit_cost") || "0"))
   if (!department || !cost_center || justification.length < 8) {
     return { success: false, error: "Department, cost center, and a business justification are required." }
+  }
+  if (!vendor_id) {
+    return { success: false, error: "Select the onboarded vendor for this requisition." }
+  }
+  const { data: vendor } = await auth.ctx.supabase
+    .from("contacts")
+    .select("id, type, vendor_status")
+    .eq("id", vendor_id)
+    .maybeSingle()
+  if (
+    !vendor ||
+    vendor.type !== "vendor" ||
+    vendor.vendor_status === "rejected" ||
+    vendor.vendor_status == null
+  ) {
+    return {
+      success: false,
+      error: "Select a vendor that has been submitted through Vendor Onboarding.",
+    }
   }
   if (!description || !Number.isFinite(quantity) || quantity <= 0) {
     return { success: false, error: "Add an item description and a positive quantity." }
@@ -124,6 +144,7 @@ export async function createPurchaseRequisition(formData: FormData): Promise<P2p
       department,
       cost_center,
       requester_id: auth.ctx.userId,
+      vendor_id,
       need_by_date,
       business_justification: justification,
       estimated_cost: line_total,

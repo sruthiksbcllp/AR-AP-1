@@ -13,8 +13,13 @@ export type BillsQueryResult = {
   error: string | null
 }
 
+export type VendorOption = Pick<
+  Contact,
+  "id" | "name" | "email" | "currency" | "vendor_status"
+>
+
 export type VendorsQueryResult = {
-  vendors: Pick<Contact, "id" | "name" | "email" | "currency">[]
+  vendors: VendorOption[]
   error: string | null
 }
 
@@ -145,9 +150,43 @@ export async function getVendorOptions(): Promise<VendorsQueryResult> {
     const { supabase } = session
     const { data, error } = await supabase
       .from("contacts")
-      .select("id, name, email, currency")
+      .select("id, name, email, currency, vendor_status")
       .eq("type", "vendor")
       .eq("vendor_status", "active")
+      .order("name", { ascending: true })
+
+    if (error) {
+      return { vendors: [], error: error.message }
+    }
+
+    return {
+      vendors: (data ?? []) as VendorsQueryResult["vendors"],
+      error: null,
+    }
+  } catch (error) {
+    return {
+      vendors: [],
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to load vendors from Supabase.",
+    }
+  }
+}
+
+export async function getOnboardedVendorOptions(): Promise<VendorsQueryResult> {
+  const session = await getSessionClient()
+  if (!session.ok) {
+    return { vendors: [], error: session.error }
+  }
+
+  try {
+    const { supabase } = session
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("id, name, email, currency, vendor_status")
+      .eq("type", "vendor")
+      .neq("vendor_status", "rejected")
       .order("name", { ascending: true })
 
     if (error) {

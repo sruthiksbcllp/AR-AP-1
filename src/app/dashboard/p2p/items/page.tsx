@@ -17,7 +17,7 @@ export default async function CatalogPage() {
   return (
     <PageShell
       title="Item catalog"
-      description="Search, filter, and maintain goods and services. 100 sample laptops are loaded for the P2P demo."
+      description="Search, filter, and maintain goods and services. 100 sample laptops are loaded for the Accounts Payable demo."
     >
       <P2pNav />
       <CatalogTable

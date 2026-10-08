@@ -50,8 +50,9 @@ export default async function DashboardContactsPage({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           Business user submits the master, then Procurement, Finance, and
-          Compliance review it. Only a created vendor can be used on RFQs and
-          bills.
+          Compliance review it. Onboarded vendors appear on purchase
+          requisitions. Only a created vendor can be used on RFQs, purchase
+          orders, and bills.
         </p>
         {canSubmit ? (
           <Button asChild>

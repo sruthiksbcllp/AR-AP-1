@@ -84,6 +84,25 @@ export async function getPurchaseRequisitions(): Promise<{
       .in("id", requesterIds)
     for (const user of users ?? []) emails.set(String(user.id), String(user.email))
   }
+  const vendorIds = [
+    ...new Set(rows.map((row) => row.vendor_id).filter(Boolean).map(String)),
+  ]
+  const vendors = new Map<
+    string,
+    { name: string; vendor_status: PurchaseRequisition["vendor_status"] }
+  >()
+  if (vendorIds.length) {
+    const { data: vendorRows } = await session.supabase
+      .from("contacts")
+      .select("id, name, vendor_status")
+      .in("id", vendorIds)
+    for (const vendor of vendorRows ?? []) {
+      vendors.set(String(vendor.id), {
+        name: String(vendor.name),
+        vendor_status: (vendor.vendor_status as PurchaseRequisition["vendor_status"]) ?? null,
+      })
+    }
+  }
   const linesByPr = new Map<string, PurchaseRequisition["lines"]>()
   for (const line of (lines ?? []) as Record<string, unknown>[]) {
     const prId = String(line.pr_id)
@@ -100,23 +119,30 @@ export async function getPurchaseRequisitions(): Promise<{
     linesByPr.set(prId, next)
   }
   return {
-    rows: rows.map((row) => ({
-      id: String(row.id),
-      org_id: String(row.org_id),
-      pr_number: String(row.pr_number),
-      department: String(row.department),
-      cost_center: String(row.cost_center),
-      requester_id: (row.requester_id as string | null) ?? null,
-      need_by_date: (row.need_by_date as string | null) ?? null,
-      business_justification: String(row.business_justification),
-      estimated_cost: num(row.estimated_cost),
-      status: row.status as PurchaseRequisition["status"],
-      created_at: String(row.created_at),
-      lines: linesByPr.get(String(row.id)) ?? [],
-      requester_email: row.requester_id
-        ? (emails.get(String(row.requester_id)) ?? null)
-        : null,
-    })),
+    rows: rows.map((row) => {
+      const vendorId = (row.vendor_id as string | null) ?? null
+      const vendor = vendorId ? vendors.get(vendorId) : undefined
+      return {
+        id: String(row.id),
+        org_id: String(row.org_id),
+        pr_number: String(row.pr_number),
+        department: String(row.department),
+        cost_center: String(row.cost_center),
+        requester_id: (row.requester_id as string | null) ?? null,
+        vendor_id: vendorId,
+        vendor_name: vendor?.name ?? null,
+        vendor_status: vendor?.vendor_status ?? null,
+        need_by_date: (row.need_by_date as string | null) ?? null,
+        business_justification: String(row.business_justification),
+        estimated_cost: num(row.estimated_cost),
+        status: row.status as PurchaseRequisition["status"],
+        created_at: String(row.created_at),
+        lines: linesByPr.get(String(row.id)) ?? [],
+        requester_email: row.requester_id
+          ? (emails.get(String(row.requester_id)) ?? null)
+          : null,
+      }
+    }),
     error: null,
   }
 }

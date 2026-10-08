@@ -59,11 +59,14 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
+                const prefixes = item.activePrefixes ?? [item.href]
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"
-                    : pathname === item.href ||
-                      pathname.startsWith(`${item.href}/`)
+                    : prefixes.some(
+                        (prefix) =>
+                          pathname === prefix || pathname.startsWith(`${prefix}/`)
+                      )
 
                 return (
                   <SidebarMenuItem key={item.href}>

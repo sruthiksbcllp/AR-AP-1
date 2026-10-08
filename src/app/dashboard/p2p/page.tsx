@@ -5,7 +5,7 @@ import { P2pNav } from "@/components/p2p/p2p-nav"
 import { PageShell } from "@/components/layout/page-shell"
 import { getP2pCounts } from "@/lib/p2p/queries"
 
-export const metadata: Metadata = { title: "Procure to Pay" }
+export const metadata: Metadata = { title: "Accounts Payable" }
 
 const FLOW = [
   { n: 1, label: "Vendor Onboarding", href: "/dashboard/contacts" },
@@ -28,8 +28,8 @@ export default async function P2pPage() {
 
   return (
     <PageShell
-      title="Procure to Pay"
-      description="Vendor creation through PR, RFQ, PO, receipt, matching, accounting, and payment close."
+      title="Accounts Payable"
+      description="Vendor invoices from requisition through receipt, matching, and payment."
     >
       <P2pNav />
       {counts.error ? (
@@ -38,7 +38,7 @@ export default async function P2pPage() {
         </p>
       ) : null}
       <section className="rounded-xl border p-4">
-        <h2 className="text-sm font-semibold">What is Procure-to-Pay?</h2>
+        <h2 className="text-sm font-semibold">What Accounts Payable covers</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
           <li>Identifying a requirement</li>
           <li>Procuring goods/services</li>
@@ -74,8 +74,8 @@ export default async function P2pPage() {
         ))}
       </div>
       <p className="rounded-xl border bg-muted/20 px-4 py-3 text-sm">
-        After payment confirmation the PO is closed, the invoice is paid, the vendor balance is
-        cleared, and the AP/Bank journal is posted — P2P completed.
+        After payment confirmation the purchase order is closed, the invoice is paid, the vendor
+        balance is cleared, and the Accounts Payable and bank journal is posted.
       </p>
     </PageShell>
   )

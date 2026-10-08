@@ -7,7 +7,6 @@ import {
   BookOpen,
   ScrollText,
   Scale,
-  Workflow,
   Building2,
   type LucideIcon,
 } from "lucide-react"
@@ -24,6 +23,8 @@ export type NavItem = {
   icon: LucideIcon
   module: AppModule
   description?: string
+  /** Extra path prefixes that keep this item highlighted. */
+  activePrefixes?: string[]
 }
 
 export const mainNavItems: NavItem[] = [
@@ -42,13 +43,6 @@ export const mainNavItems: NavItem[] = [
     description: "Invoices, collections, and aging",
   },
   {
-    title: "Procure to Pay",
-    href: "/dashboard/p2p",
-    icon: Workflow,
-    module: "p2p",
-    description: "Vendor to payment close",
-  },
-  {
     title: "Request for Quotation",
     href: "/dashboard/rfq",
     icon: Scale,
@@ -56,11 +50,12 @@ export const mainNavItems: NavItem[] = [
     description: "Compare vendor quotes before a bill",
   },
   {
-    title: "Accounts Payable (AP)",
-    href: "/dashboard/ap",
+    title: "Accounts Payable",
+    href: "/dashboard/p2p",
     icon: Wallet,
-    module: "ap",
-    description: "Bills, payments, and vendor spend",
+    module: "p2p",
+    description: "Vendor invoices, matching, and payments",
+    activePrefixes: ["/dashboard/p2p", "/dashboard/ap"],
   },
   {
     title: "Approvals",

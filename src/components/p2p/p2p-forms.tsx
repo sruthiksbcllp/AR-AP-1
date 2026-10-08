@@ -11,6 +11,7 @@ import {
   createServiceEntry,
   runThreeWayMatch,
 } from "@/app/dashboard/p2p/actions"
+import { VendorCombobox } from "@/components/ap/vendor-combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,24 +25,42 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { formatINR } from "@/lib/currency"
 import { poApproverLabel } from "@/lib/auth/roles"
+import { VENDOR_STATUS_LABELS } from "@/types/contacts"
 import type { CatalogItem } from "@/types/p2p"
+import type { VendorOption } from "@/lib/ap/queries"
 
 type VendorOpt = { id: string; name: string }
 type PoOpt = { id: string; po_number: string; status: string; lines: { id: string; description: string; quantity: number }[] }
 type BillOpt = { id: string; bill_number: string; balance_due: number }
 
-export function PrForm({ items }: { items: CatalogItem[] }) {
+export function PrForm({
+  items,
+  vendors,
+}: {
+  items: CatalogItem[]
+  vendors: VendorOption[]
+}) {
   const router = useRouter()
   const [pending, setPending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [vendorId, setVendorId] = React.useState(vendors.length === 1 ? vendors[0].id : "")
   const [itemId, setItemId] = React.useState(items[0]?.id ?? "")
   const selected = items.find((item) => item.id === itemId)
+  const vendorChoices = vendors.map((vendor) => ({
+    id: vendor.id,
+    name:
+      vendor.vendor_status && vendor.vendor_status !== "active"
+        ? `${vendor.name} · ${VENDOR_STATUS_LABELS[vendor.vendor_status]}`
+        : vendor.name,
+    email: vendor.email,
+  }))
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
     setError(null)
     const formData = new FormData(event.currentTarget)
+    formData.set("vendor_id", vendorId)
     formData.set("item_id", itemId)
     if (selected && !formData.get("description")) formData.set("description", selected.name)
     const result = await createPurchaseRequisition(formData)
@@ -56,6 +75,19 @@ export function PrForm({ items }: { items: CatalogItem[] }) {
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4 rounded-xl border p-4 md:grid-cols-2">
+      <div className="space-y-2 md:col-span-2">
+        <Label htmlFor="vendor_id">Vendor</Label>
+        <VendorCombobox
+          vendors={vendorChoices}
+          value={vendorId}
+          onChange={setVendorId}
+          disabled={pending || vendors.length === 0}
+        />
+        <p className="text-xs text-muted-foreground">
+          Vendors come from Vendor Onboarding for this company. Finish reviews so the
+          supplier shows as Vendor Created before a purchase order is issued.
+        </p>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="department">Department</Label>
         <Input id="department" name="department" required placeholder="Marketing" disabled={pending} />
@@ -121,7 +153,9 @@ export function PrForm({ items }: { items: CatalogItem[] }) {
       </div>
       {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}
       <div className="flex justify-end gap-2 md:col-span-2">
-        <Button type="submit" disabled={pending}>Submit for manager approval</Button>
+        <Button type="submit" disabled={pending || !vendorId}>
+          Submit for manager approval
+        </Button>
       </div>
     </form>
   )
